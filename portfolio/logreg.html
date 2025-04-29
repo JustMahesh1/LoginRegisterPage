@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Futuristic Login/Register</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(ellipse at center, #0f0f0f 0%, #050505 100%);
+      color: white;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      transition: all 1s ease;
+    }
+
+    .form-box {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid #00f0ff;
+      border-radius: 20px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 0 20px #00f0ff;
+      backdrop-filter: blur(10px);
+      animation: pulseGlow 2s infinite ease-in-out;
+      text-align: center;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 20px #00f0ff; }
+      50% { box-shadow: 0 0 40px #00ffdd; }
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      background: #111;
+      color: #00f0ff;
+      border: 1px solid #00f0ff;
+      transition: 0.3s;
+    }
+
+    input:focus, button:hover {
+      border-color: #00ffdd;
+      box-shadow: 0 0 10px #00ffdd;
+    }
+
+    .toggle {
+      color: #00ffdd;
+      cursor: pointer;
+      text-align: center;
+      margin-top: 1rem;
+    }
+
+    .forgot {
+      font-size: 0.9rem;
+      color: #00c0ff;
+      cursor: pointer;
+      text-align: right;
+      margin-top: -0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+    }
+
+    /* Full-Screen Loader */
+    .loader-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .loader {
+      border: 16px solid #f3f3f3; 
+      border-top: 16px solid #00f0ff;
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      animation: spin 2s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bgCanvas"></canvas>
+  
+  <!-- Full-Screen Loader -->
+  <div class="loader-overlay" id="loaderOverlay">
+    <div class="loader"></div>
+  </div>
+
+  <div class="container">
+    <div class="form-box" id="form-box">
+      <h2 id="form-title">Register</h2>
+      <input type="text" id="name" placeholder="Name">
+      <input type="email" id="email" placeholder="Email">
+      <select id="gender">
+        <option value="">Gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Other">Other</option>
+      </select>
+      <input type="password" id="password" placeholder="Password">
+      <input type="password" id="repassword" placeholder="Re-enter Password">
+      <div class="forgot" id="forgotPassword" onclick="forgotPassword()" style="display: none;">Forgot Password?</div>
+      <button onclick="handleSubmit()" id="submitBtn">Register</button>
+      <div class="toggle" onclick="toggleForm()">Already have an account? Login</div>
+      <div id="emailVerifyMsg" style="display: none; color: #ff0000;">Please verify your email before logging in.</div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAIwZzWt5B-Toa2pADIFcsc-dSnOESQ9FQ",
+      authDomain: "myreg-5400d.firebaseapp.com",
+      projectId: "myreg-5400d",
+      storageBucket: "myreg-5400d.firebasestorage.app",
+      messagingSenderId: "188470758530",
+      appId: "1:188470758530:web:2f5878e7db8079154bf89b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getDatabase();
+
+    let isLogin = false;
+
+    const getFriendlyError = (code) => {
+      switch (code) {
+        case 'auth/user-not-found': return 'User not found.';
+        case 'auth/wrong-password': return 'Incorrect password.';
+        case 'auth/email-already-in-use': return 'Email already registered.';
+        case 'auth/weak-password': return 'Password should be at least 6 characters.';
+        case 'auth/invalid-email': return 'Invalid email address.';
+        default: return 'Something went wrong. Please try again.';
+      }
+    };
+
+    window.toggleForm = function () {
+      const title = document.getElementById('form-title');
+      const submitBtn = document.getElementById('submitBtn');
+      const toggle = document.querySelector('.toggle');
+      const nameField = document.getElementById('name');
+      const genderField = document.getElementById('gender');
+      const rePasswordField = document.getElementById('repassword');
+      const forgotPasswordLink = document.getElementById('forgotPassword');
+      const emailVerifyMsg = document.getElementById('emailVerifyMsg');
+
+      isLogin = !isLogin;
+      if (isLogin) {
+        title.innerText = 'Login';
+        submitBtn.innerText = 'Login';
+        toggle.innerText = "Don't have an account? Register";
+        nameField.style.display = 'none';
+        genderField.style.display = 'none';
+        rePasswordField.style.display = 'none';
+        forgotPasswordLink.style.display = 'block';
+        emailVerifyMsg.style.display = 'none';
+      } else {
+        title.innerText = 'Register';
+        submitBtn.innerText = 'Register';
+        toggle.innerText = "Already have an account? Login";
+        nameField.style.display = 'block';
+        genderField.style.display = 'block';
+        rePasswordField.style.display = 'block';
+        forgotPasswordLink.style.display = 'none';
+        emailVerifyMsg.style.display = 'none';
+      }
+    }
+
+    window.handleSubmit = function () {
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const gender = document.getElementById('gender').value;
+      const password = document.getElementById('password').value;
+      const rePassword = document.getElementById('repassword').value;
+
+      const loaderOverlay = document.getElementById('loaderOverlay');
+      loaderOverlay.style.display = 'flex'; // Show the loader
+
+      if (!isLogin && password !== rePassword) {
+        alert("Passwords do not match");
+        loaderOverlay.style.display = 'none'; // Hide the loader
+        return;
+      }
+
+      if (isLogin) {
+        signInWithEmailAndPassword(auth, email, password)
+          .then((userCredential) => {
+            const user = userCredential.user;
+            if (!user.emailVerified) {
+              document.getElementById('emailVerifyMsg').style.display = 'block';
+              loaderOverlay.style.display = 'none'; // Hide the loader
+            } else {
+              alert('Login successful');
+              loaderOverlay.style.display = 'none'; // Hide the loader
+              window.location.href = 'user.html'; // Redirect to dashboard after successful login
+            }
+          })
+          .catch(error => {
+            alert(getFriendlyError(error.code));
+            loaderOverlay.style.display = 'none'; // Hide the loader
+          });
+      } else {
+        createUserWithEmailAndPassword(auth, email, password)
+          .then((userCredential) => {
+            const uid = userCredential.user.uid;
+            set(ref(db, 'users/' + uid), {
+              name,
+              email,
+              gender,
+              createdAt: new Date().toISOString()
+            }).then(() => {
+              sendEmailVerification(auth.currentUser) // Send verification email
+                .then(() => {
+                  alert('Registration successful. Please verify your email.');
+                  loaderOverlay.style.display = 'none'; // Hide the loader
+                  toggleForm(); // Switch to login form
+                })
+                .catch(error => {
+                  alert(getFriendlyError(error.code));
+                  loaderOverlay.style.display = 'none'; // Hide the loader
+                });
+            });
+          })
+          .catch(error => {
+            alert(getFriendlyError(error.code));
+            loaderOverlay.style.display = 'none'; // Hide the loader
+          });
+      }
+    };
+
+    window.forgotPassword = function () {
+      const email = document.getElementById('email').value;
+      sendPasswordResetEmail(auth, email)
+        .then(() => {
+          alert('Password reset email sent.');
+        })
+        .catch(error => {
+          alert(getFriendlyError(error.code));
+        });
+    };
+
+    // Background Animation
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const particles = [];
+
+    function Particle() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.radius = Math.random() * 5 + 1;
+      this.color = 'rgba(0, 240, 255, 0.5)';
+      this.speed = Math.random() * 2 + 0.5;
+      this.direction = Math.random() * 360;
+
+      this.update = function () {
+        const radian = this.direction * Math.PI / 180;
+        this.x += Math.cos(radian) * this.speed;
+        this.y += Math.sin(radian) * this.speed;
+        if (this.x > canvas.width || this.x < 0 || this.y > canvas.height || this.y < 0) {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+        }
+      };
+
+      this.draw = function () {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+      };
+    }
+
+    for (let i = 0; i < 150; i++) {
+      particles.push(new Particle());
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(particle => {
+        particle.update();
+        particle.draw();
+      });
+      requestAnimationFrame(animate);
+    }
+
+    animate();
+  </script>
+</body>
+</html>
+
+

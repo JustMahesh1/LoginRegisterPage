@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Welcome - Futuristic</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Orbitron', sans-serif;
+    }
+
+    body {
+      background: radial-gradient(ellipse at center, #0f0f0f 0%, #050505 100%);
+      color: white;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+
+    .welcome-box {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid #00f0ff;
+      border-radius: 20px;
+      padding: 3rem;
+      width: 90%;
+      max-width: 600px;
+      box-shadow: 0 0 20px #00f0ff;
+      backdrop-filter: blur(10px);
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 20px #00f0ff; }
+      50% { box-shadow: 0 0 40px #00ffdd; }
+    }
+
+    h2 {
+      font-size: 2.5rem;
+      color: #00f0ff;
+      margin-bottom: 2rem;
+    }
+
+    button {
+      padding: 1rem 2rem;
+      border-radius: 15px;
+      background-color: #00f0ff;
+      color: #050505;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #00ffdd;
+    }
+
+    .logout {
+      font-size: 1rem;
+      color: #ff3366;
+      margin-top: 2rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: -1;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bgCanvas"></canvas>
+
+  <div class="container">
+    <div class="welcome-box">
+      <h2>Welcome to Your Dashboard!</h2>
+      <button onclick="navigateToHomePage()">Go to Home Page</button>
+      <div class="logout" onclick="logout()">Logout</div>
+    </div>
+  </div>
+
+  <script>
+    function navigateToHomePage() {
+      window.location.href = 'home.html'; // Replace with actual home page if needed
+    }
+
+    function logout() {
+      window.location.href = 'logreg.html'; // Redirect to login page
+    }
+
+    // Futuristic animated background
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    let particles = [];
+    for (let i = 0; i < 100; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 1,
+        dx: (Math.random() - 0.5) * 0.5,
+        dy: (Math.random() - 0.5) * 0.5
+      });
+    }
+
+    function animateParticles() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#00f0ff';
+      particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+      });
+      requestAnimationFrame(animateParticles);
+    }
+
+    animateParticles();
+  </script>
+</body>
+</html>
